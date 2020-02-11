@@ -1,0 +1,11 @@
+#!/bin/bash
+if [ $# -lt 4 ]; then 
+    echo " please provide following arguments "
+    echo " arg #1   : text"  
+    echo " arg #2   : attachment"
+    echo " arg #3   : subject"
+    echo " arg #4   : address"  
+    exit 1
+else        
+    cat $1 | mailx -S sendmail="/usr/bin/msmtp" -a $2 -s $3 $4
+fi

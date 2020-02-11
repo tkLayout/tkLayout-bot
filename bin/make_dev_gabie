@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# Helper function to get the absolute path of a relative directory
+function absolute-dir {
+  currentDir=`pwd`
+  cd $1
+  pwd
+  cd $currentDir
+}
+
+# Some environment variables
+tkLayoutDirectory=/home/tklayout-git
+doxygenTargetDirectory="/eos/user/t/tklayout/www/tklayout-git_doxygen"
+myDir=`dirname $0`
+echo myDir=$myDir
+myDirAbsolute=`absolute-dir $myDir`
+scriptTimeStamp=`date +%s`
+scriptTimeStampFile=".scriptTimeStamp"
+
+echo "My directory is "$myDirAbsolute
+counter=0
+
+# WARNING: check if the 'git checkout' command works manually with branches first!
+#branchList=(dev_gabie master dev)
+branchList=(dev_gabie)
+
+# Build the code and layouts for a few branches 
+for branchName in ${branchList[*]}; do
+  if [ "$branchName" == "dev" ]; then
+    addOptions="-R -w "
+  elif [ "$branchName" == "dev_gabie" ]; then
+    addOptions="-R -w "
+  else
+    addOptions=""
+  fi
+  kinit -R `whoami`@CERN.CH
+  echo branchName=$branchName
+  export TKGEOMETRYRC=$tkLayoutDirectory/tkgeometryrc-$branchName
+  source $TKGEOMETRYRC
+  mkdir -p $TKG_LAYOUTDIRECTORY
+  fs setacl -dir $TKG_LAYOUTDIRECTORY -acl webserver:afs rl
+  codeDirectory="$tkLayoutDirectory/tkLayout"
+  cd $codeDirectory
+  git fetch
+  git checkout $branchName
+  git pull origin $branchName
+  git clean -fd
+#  git pull 
+#  git clean -fd
+  flag=$(git log --since='120 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author | wc -l); 
+  echo "===> "$flag
+#  if [ $flag -eq  0 ]; then  
+#      echo "No update in Branch : "$branchName 
+#  else 
+      last_updates=$(git log --since='120 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author)
+      echo "$last_updates"
+      let "counter=$counter+1"
+      source setup_slc6.sh
+      rm -f bin/tklayout
+      make clean && make -j6 && {
+	  cd $TKG_STANDARDDIRECTORY/geometries/
+          activeLayouts=`grep SimParms -rli CMS_Phase2/* | grep 463`
+          activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(367|567|568)'`
+          activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT613_200_IT4025)'`
+          pwd
+	  myDir=`pwd`
+	  lindx=0 
+	  for aLayout in $activeLayouts; do
+              kinit -R `whoami`@CERN.CH
+	      echo "date and time: `date`"; echo "timestamp: `date +%s`"
+	      let "lindx=$lindx+1"
+	      echo "Branch Name "$branchName"::Starting Layout no. "$lindx" => "$aLayout
+	      layoutCfg=`basename $aLayout`
+	      layoutDir=`dirname $aLayout`
+	      cd $myDir/$layoutDir
+              pwd 
+ 	      echo "${codeDirectory}/bin/tklayout --performance -d -a -N 3000 -n 50000 -T $addOptions $layoutCfg"
+	      ${codeDirectory}/bin/tklayout --performance -d -a -N 3000 -n 50000 -T $addOptions $layoutCfg
+#	      ${codeDirectory}/bin/tklayout --performance -t -T $addOptions $layoutCfg
+              layoutName=`echo $layoutCfg | sed -e 's/.cfg$//g'`
+              targetLayoutDir="$TKG_LAYOUTDIRECTORY/$layoutName"
+              if [ -d $targetLayoutDir ] ; then
+                echo "$scriptTimeStamp" > $targetLayoutDir/$scriptTimeStampFile
+	        $myDirAbsolute/createLayoutList
+	        echo "Branch Name "$branchName"::Done with Layout no. "$lindx
+              else
+                echo "ERROR: target directory $targetLayoutDir not created!"
+              fi
+	  done
+	  echo "date and time: `date`"; echo "timestamp: `date +%s`"
+	  echo ok
+          
+      } || {
+	  echo Compilation and/or installation failed
+      }
+  #fi
+  # Let's remove outdated stuff
+  cd $TKG_LAYOUTDIRECTORY
+
+  mkdir -p .Trash
+#  for timestamp in */$scriptTimeStampFile; do
+#      if [ -f $timestamp ]; then
+#	  if ! echo "$scriptTimeStamp" | cmp -s - $timestamp ; then
+#	      aDirectory=`dirname $timestamp`
+#	      echo "Moving outdated layout $aDirectory to .Trash"
+#	      mv $aDirectory .Trash
+#	  fi
+#      fi
+#  done
+  $myDirAbsolute/createLayoutList
+done

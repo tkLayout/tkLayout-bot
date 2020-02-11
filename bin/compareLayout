@@ -1,0 +1,142 @@
+#!/bin/bash
+set -o nounset
+#
+
+checkFile="/afs/cern.ch/user/t/tklayout/public/comparison_"`date "+%F"`".txt"
+logfile="/afs/cern.ch/user/t/tklayout/public/tklayout_nightly_"`date "+%F"`".log"
+mailFile="/afs/cern.ch/user/t/tklayout/public/mail.txt"
+currentDir=`pwd`
+branchList=(repository-git-dev repository-git-master)
+layoutList=(Baseline2015)
+msgSep=" ==========================="
+
+# Send Mail with comparison output
+#address="Suchandra.Dutta@cern.ch, Subir.Sarkar@cern.ch, Rajarshi.Bhattacharya@cern.ch"
+address="Suchandra.Dutta@cern.ch"
+mailSub="TkLayoutComparison"
+
+if [ ! -f $logfile ]; then 
+   echo "Log File Missing, Please Check !!! " | mail  -s $mailSub $address
+   exit 1
+fi 
+
+updateflag=$(grep -c "No update in Branch : " $logfile)
+if [ $updateflag -gt 2 ]; then
+    echo " No Update found " | mail  -s $mailSub $address
+    exit 2
+fi
+
+rm -f $checkFile
+touch $checkFile
+mailText=" Please check comparison for Layouts in master and dev branch for Layout(s) : "
+echo $mailText
+
+msgSep=" ===========================" >> $checkFile
+echo "git Updates :" >> $checkFile
+grep "The author" $logfile >> $checkFile
+msgSep=" ===========================" >> $checkFile
+
+for iLayout in ${layoutList[*]}; do
+    dirRef=/eos/user/t/tklayout/www/layouts/${branchList[0]}/$iLayout
+    dirTest=/eos/user/t/tklayout/www/layouts/${branchList[1]}/$iLayout
+    webLinkRef=http://cms-tklayout.web.cern.ch/cms-tklayout/layouts/${branchList[0]}/$iLayout
+    webLinkTest=http://cms-tklayout.web.cern.ch/cms-tklayout/layouts/${branchList[1]}/$iLayout
+
+    nhtml_ref=$(ls -1 $dirRef/*.html |wc -l)
+    nhtml_test=$(ls -1 $dirTest/*.html | wc -l)
+
+    if [ $nhtml_ref -gt $nhtml_test ]; then
+      cd $dirRef
+    else 
+      cd $dirTest
+    fi
+
+    echo $msgSep  >> $checkFile
+    echo " Checking html files for the Layout=>"$iLayout >> $checkFile
+    echo $msgSep  >> $checkFile
+    
+    find .  -name '*.html'| while read hfile; do 
+#    --- get rid of './' from the file name 
+        fname=$(echo $hfile | sed 's#./##g') 
+          
+        if [ ! -f "$dirRef/$fname" ]; then  
+	  echo $msgSep >> $checkFile
+          echo "File "$fname" Missing in Master Area !!!" >> $checkFile
+	  echo $msgSep >> $checkFile
+          continue
+        fi
+	fileRef="$dirRef/$fname"
+
+        if [ ! -f "$dirTest/$fname" ]; then  
+	  echo $msgSep >> $checkFile
+          echo "File "$fname" Missing in Dev Area !!!" >> $checkFile
+	  echo $msgSep >> $checkFile
+          continue
+        fi
+	fileTest="$dirTest/$fname"
+
+	result=$(diff --brief -I "Page created on" -I "revision" -I "Weights" "$fileRef" "$fileTest")
+	if [ $? -ne 0 ]; then
+            echo $msgSep >> $checkFile
+            echo " Difference between : " >> $checkFile
+            echo " "$webLinkRef"/"$fname
+            echo " "$webLinkRef"/"$fname  >> $checkFile 
+            echo " "$webLinkTest"/"$fname  >> $checkFile 
+            echo $msgSep  >> $checkFile
+            perl -w /home/tklayout-git/bin/parser.pl "$fileRef" "$fileTest" >> $checkFile
+	fi
+    done
+    echo $msgSep >> $checkFile
+    echo " Checking png files for the Layout=>"$iLayout >> $checkFile
+    echo $msgSep  >> $checkFile
+    npng_ref=$(ls -1 $dirRef/*.png |wc -l)
+    npng_test=$(ls -1 $dirTest/*.png | wc -l)
+
+    if [ $npng_ref -gt $npng_test ]; then
+      cd $dirRef
+    else 
+      cd $dirTest
+    fi
+
+    find .  -name '*.png'| while read pfile; do 
+#    --- get rid of './' from the file name 
+        pname=$(echo $pfile | sed 's#./##g') 
+
+        if [ ! -f "$dirRef/$pname" ]; then  
+	  echo $msgSep >> $checkFile
+          echo "File "$pname" Missing in Master Area !!!" >> $checkFile
+	  echo $msgSep >> $checkFile
+          continue
+        fi
+
+        fileRef="$dirRef/$pname"
+        if [ ! -f "$dirTest/$pname" ]; then  
+	  echo $msgSep  >> $checkFile
+          echo "File "$pname" Missing in Dev Area !!!"  >> $checkFile
+	  echo $msgSep  >> $checkFile
+          continue
+        fi
+        fileTest="$dirTest/$pname"  
+
+        result=$(diff --brief "$fileRef" "$fileTest")
+	if [ $? -ne 0 ]; then
+            echo $msgSep  >> $checkFile
+            echo " Difference between :"   >> $checkFile
+            echo " "$webLinkRef"/"$pname   >> $checkFile
+            echo " "$webLinkTest"/"$pname  >> $checkFile  
+            echo $msgSep  >> $checkFile
+	fi
+    done
+    cd $currentDir
+    mailText=$mailText'  '$iLayout
+done 
+cd $currentDir
+
+
+
+rm -f $mailFile 
+touch $mailFile
+echo $mailText >> $mailFile
+echo  $mailFile $checkFile $mailSub $address 
+/home/tklayout-git/bin/mailToDevel $mailFile $checkFile $mailSub $address
+#cat $mailFile | mail -a $checkFile -s $mailSub $address

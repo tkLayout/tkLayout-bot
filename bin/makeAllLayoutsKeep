@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Helper function to get the absolute path of a relative directory
+function absolute-dir() {
+  currentDir=`pwd`
+  cd $1
+  pwd
+  cd $currentDir
+}
+
+# Some environment variables
+tkLayoutDirectory=/home/tklayout-git
+doxygenTargetDirectory="/eos/user/t/tklayout/www/tklayout-git_doxygen"
+myDir=`dirname $0`
+echo myDir=$myDir
+myDirAbsolute=`absolute-dir $myDir`
+
+echo "My directory is "$myDirAbsolute
+
+# WARNING: check if the 'git checkout' command works manually with branches first!
+branchList=(dev master)
+
+# Build the code and layouts for a few branches 
+for branchName in ${branchList[*]}; do
+  echo branchName=$branchName
+  export TKGEOMETRYRC=$tkLayoutDirectory/tkgeometryrc-$branchName
+  source $TKGEOMETRYRC
+  mkdir -p $TKG_LAYOUTDIRECTORY
+  fs setacl -dir $TKG_LAYOUTDIRECTORY -acl webserver:afs rl
+  codeDirectory="$tkLayoutDirectory/tkLayout"
+  cd $codeDirectory
+  git fetch 
+  git checkout $branchName
+  git pull 
+  source setup_slc6.sh
+  rm -f bin/tklayout
+  make clean && make -j6 && {
+    cd $TKG_STANDARDDIRECTORY/geometries/
+    activeLayouts=`grep SimParms -rli *`
+    myDir=`pwd`
+    lindx=0 
+    for aLayout in $activeLayouts; do
+      echo "date and time: `date`"; echo "timestamp: `date +%s`"
+      let "lindx=$lindx+1"
+      echo "Branch Name "$branchName"::Starting Layout no. "$lindx" => "$aLayout
+      layoutCfg=`basename $aLayout`
+      layoutDir=`dirname $aLayout`
+      cd $myDir/$layoutDir
+      echo "${codeDirectory}/bin/tklayout --performance -d -a -N 3000 -n 50000 -T $layoutCfg"
+      ${codeDirectory}/bin/tklayout --performance -d -a -N 3000 -n 50000 -T $layoutCfg
+      $myDirAbsolute/createLayoutList
+      echo "Branch Name "$branchName"::Done with Layout no. "$lindx
+    done
+    echo "date and time: `date`"; echo "timestamp: `date +%s`"
+    echo ok
+  } || {
+    echo Compilation and/or installation failed
+  }
+done
+
+
+ Build the doxygen documentation from the trunk
+echo $tkLayoutDirectory
+cd $tkLayoutDirectory
+cd tkLayout 
+nowDir=`pwd`
+echo $myDir
+rm -rf doc/doxygen/
+doxygen doc/tkdoc.doxy
+rm -rf ${doxygenTargetDirectory} 
+mkdir -p ${doxygenTargetDirectory}
+echo $doxygenTargetDirectory
+fs setacl -dir ${doxygenTargetDirectory} -acl webserver:afs rl
+mv doc/doxygen/html/* ${doxygenTargetDirectory}
+

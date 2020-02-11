@@ -1,0 +1,144 @@
+#!/bin/bash
+
+# Helper function to get the absolute path of a relative directory
+function absolute-dir {
+  currentDir=`pwd`
+  cd $1
+  pwd
+  cd $currentDir
+}
+
+# Some environment variables
+tkLayoutUserDirectory=/afs/cern.ch/user/t/tklayout
+tkLayoutDirectory=/home/tklayout-git
+doxygenTargetDirectory="/eos/user/t/tklayout/www/tklayout-git_doxygen"
+TKG_RECENTLAYOUTDIRECTORY="/eos/user/t/tklayout/www/layouts/recent-layouts"
+myDir=`dirname $0`
+echo myDir=$myDir
+myDirAbsolute=`absolute-dir $myDir`
+scriptTimeStamp=`date +%s`
+scriptTimeStampFile=".scriptTimeStamp"
+
+echo "My directory is "$myDirAbsolute
+counter=0
+
+# export EOS_MGM_URL=root://eosuser.cern.ch
+# eosfusebind
+
+# WARNING: check if the 'git checkout' command works manually with branches first!
+branchList=(master dev)
+
+# Checkout a fresh repo
+cd $tkLayoutDirectory
+rm -rf tkLayout
+git clone https://github.com/tkLayout/tkLayout.git
+
+# Build the code and layouts for a few branches 
+for branchName in ${branchList[*]}; do
+    addOptions="-R -w "
+    kinit -R `whoami`@CERN.CH
+    echo branchName=$branchName
+    export TKGEOMETRYRC=$tkLayoutDirectory/tkgeometryrc-$branchName
+    source $TKGEOMETRYRC
+    mkdir -p $TKG_LAYOUTDIRECTORY
+    #fs setacl -dir $TKG_LAYOUTDIRECTORY -acl webserver:afs rl
+    codeDirectory="$tkLayoutDirectory/tkLayout"
+    cd $codeDirectory
+    git fetch origin
+    git checkout $branchName
+    git pull origin $branchName
+    git clean -fd
+    
+    # Check whether there has been any update in the branch
+    updateFlag=$(git log --since='240 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author | wc -l);
+    echo "===> Number of recent updates: "$updateFlag
+    if [ $updateFlag -eq  0 ]; then  
+	echo "No update in Branch : "$branchName 
+    else 
+	last_updates=$(git log --since='240 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author)
+	echo "$last_updates"
+	let "counter=$counter+1"
+	source setup_centos7.sh 
+	rm -f bin/tklayout
+
+	make clean && make -j10 && {
+	    cd $TKG_STANDARDDIRECTORY/geometries/
+	    #activeLayouts=`grep SimParms -rli CMS_Phase2/*`
+	    activeLayouts=`grep SimParms -rli CMS_Phase2/OT6*`
+	    #recentLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(IT404|IT405|IT406|IT407|IT408|IT420|IT421|IT422|IT423|IT502|IT503)'`
+	    pwd
+	    myDir=`pwd`
+	    lindx=0 
+	    for aLayout in $activeLayouts; do
+		kinit -R `whoami`@CERN.CH
+		echo "date and time: `date`"; echo "timestamp: `date +%s`"
+		let "lindx=$lindx+1"
+                # Some afs magic to avoid issues while dealing with a huge number of files.
+		fs checkvolumes
+		fs flushv $tkLayoutUserDirectory
+		echo "Branch Name "$branchName"::Starting Layout no. "$lindx" => "$aLayout
+		layoutCfg=`basename $aLayout`
+		layoutDir=`dirname $aLayout`
+		cd $myDir/$layoutDir
+		pwd
+		
+ 		echo "${codeDirectory}/bin/tklayout --performance -a -N 3000 -n 50000 -T $addOptions $layoutCfg"
+		${codeDirectory}/bin/tklayout --performance -a -N 3000 -n 50000 -T $addOptions $layoutCfg
+		layoutName=`echo $layoutCfg | sed -e 's/.cfg$//g'`
+		targetLayoutDir="$TKG_LAYOUTDIRECTORY/$layoutName"
+		if [ -d $targetLayoutDir ] ; then
+		    echo "$scriptTimeStamp" > $targetLayoutDir/$scriptTimeStampFile
+		    $myDirAbsolute/createLayoutList
+		    echo "Branch Name "$branchName"::Done with Layout no. "$lindx
+		else
+		    echo "ERROR: target directory $targetLayoutDir not created!"
+		fi
+                # If in dev and the layout is recent, make it accessible from recent-layouts tab.
+		#if [ "$branchName" == "dev" ] && [[ "${recentLayouts[*]}" =~ "$aLayout" ]]; then
+		    #if [ -d $targetLayoutDir ] ; then		    
+			#recentLayout="$TKG_RECENTLAYOUTDIRECTORY/$layoutName"
+			#eos rm -fr $recentLayout
+			#ln -snf $targetLayout $recentLayout
+			#$myDirAbsolute/createLayoutList
+			#echo "Recent layouts tab: Add link to "$branchName" layout no. "$lindx
+		    #fi
+		#fi
+	    done
+	    echo "date and time: `date`"; echo "timestamp: `date +%s`"
+	    echo ok
+	    
+	} || {
+	    echo Compilation and/or installation failed
+	}
+    fi
+    # Let's remove outdated stuff
+    cd $TKG_LAYOUTDIRECTORY
+	#eos mkdir -p .Trash
+	#for timestamp in */$scriptTimeStampFile; do
+	    #if [ -f $timestamp ]; then
+		#if ! echo "$scriptTimeStamp" | cmp -s - $timestamp ; then
+		    #aDirectory=`dirname $timestamp`
+		    #echo "Moving outdated layout $aDirectory to .Trash"
+		    #mv $aDirectory .Trash
+		#fi
+	    #fi
+	#done
+    $myDirAbsolute/createLayoutList
+done
+
+if [ $counter -gt 0 ]; then 
+# Build the doxygen documentation from the trunk
+    echo $tkLayoutDirectory
+    cd $tkLayoutDirectory
+    cd tkLayout 
+    nowDir=`pwd`
+    echo $myDir
+    rm -rf doc/doxygen/
+    doxygen doc/tkdoc.doxy
+    rm -rf ${doxygenTargetDirectory} 
+    mkdir -p ${doxygenTargetDirectory}
+    echo $doxygenTargetDirectory
+    #fs setacl -dir ${doxygenTargetDirectory} -acl webserver:afs rl
+    mv doc/doxygen/html/* ${doxygenTargetDirectory}
+fi    
+

@@ -1,0 +1,108 @@
+#!/bin/bash
+set -o nounset
+
+function sendMail {
+    address="Stefano.Mersi@cern.ch,Gabrielle.Hugo@cern.ch"
+    cat $1 | mail -s $2 $address
+    rm $1
+}
+
+# define log file name
+logfile="/afs/cern.ch/user/t/tklayout/public/tklayout_nightly_"`date "+%F"`".log"
+outfile="/afs/cern.ch/user/t/tklayout/public/message.txt"
+checkfile="/afs/cern.ch/user/t/tklayout/public/compare.txt"
+
+# export EOS_MGM_URL=root://eosuser.cern.ch
+# eosfusebind
+
+touch $outfile
+rm -f $checkfile
+
+/home/tklayout-git/bin/makeAllLayoutsDev > $logfile
+
+
+# check the log file and decide if the build was succesfull or not
+errMsg="Compilation and/or installation failed"
+buildFlag=0;
+msgSep="=============================================="  
+mailSub="Success"
+
+if [ ! -f $logfile ]; then
+    mailSub="NoFile"
+    echo "Log file missing !!!" >> $outfile
+    echo $msgSep >> $outfile
+    sendMail $outfile $mailSub
+    exit 1
+fi 
+
+
+updateflag=$(grep -c "No update in Branch : " $logfile)
+
+buildflag=$(grep -c "Compilation and/or installation failed" $logfile)
+
+branchList=(dev master)
+
+if [ $updateflag -eq 3 ]; then
+    mailSub="NoUpdate"
+    echo "No Update, layouts not created !!!" >> $outfile
+    sendMail $outfile $mailSub    
+    exit 1
+elif [ $buildflag -gt 0 ]; then
+    mailSub="Failure";
+    echo "Build Failure !!" >> $outfile
+    sendMail $outfile $mailSub
+    exit 2
+fi
+  
+echo "Build Successful"  >> $outfile
+echo $msgSep    >> $outfile
+echo " "        >> $outfile
+
+echo " Creation of Layouts" >> $outfile 
+echo " "        >> $outfile
+
+
+# Build the code and layouts for a few branches 
+for branchName in ${branchList[*]}; 
+do
+    nlayout=$(grep -c "Branch Name "$branchName"::Starting Layout no." $logfile)
+    echo $msgSep >> $outfile
+    echo " Checking branch => "$branchName >> $outfile
+    echo $msgSep >> $outfile
+    
+    if [ $nlayout -gt 0 ]; then 
+
+	echo $msgSep >> $outfile
+	echo "Update(s) in git" >> $outfile 
+	grep  "The author" $logfile  >> $outfile
+	echo $msgSep >> $outfile
+
+	for i in $(seq 1 $nlayout)
+	do 
+	    starttag="Branch Name "$branchName"::Starting Layout no. "$i" "
+	    name=$(grep "$starttag"  $logfile);
+	    echo $name | sed 's@BarrelEndcap/@ @g' >> $outfile
+	    
+	    donetag="Branch Name "$branchName"::Done with Layout no. "$i
+            echo $donetag
+            echo $logfile
+	    doneflag=$(grep -c  "$donetag" $logfile)
+            echo $doneflag	    
+	    if [ $doneflag -gt 0 ]; then 
+		echo "Successfully created layout " >> $outfile
+	    else  
+		echo "Failed to create layout " >> $outfile    
+	    fi
+	done
+	echo " " >> $outfile
+    fi
+done
+
+echo $msgSep >> $outfile
+echo " " >> $outfile
+
+echo "Layout links : " >> $outfile
+echo "   master      : http://cms-tklayout.web.cern.ch/cms-tklayout/layouts/repository-git-master/" >> $outfile
+echo "   dev         : http://cms-tklayout.web.cern.ch/cms-tklayout/layouts/repository-git-dev/" >> $outfile
+
+sendMail $outfile $mailSub
