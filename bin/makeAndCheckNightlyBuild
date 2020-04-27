@@ -18,7 +18,7 @@ checkfile="/afs/cern.ch/user/t/tklayout/public/compare.txt"
 touch $outfile
 rm -f $checkfile
 
-/home/tklayout-git/bin/makeAllLayoutsDev > $logfile
+/afs/cern.ch/user/t/tklayout/private/tkLayout-nightlies/tkLayout-bot/bin/makeAllLayoutsDev > $logfile
 
 
 # check the log file and decide if the build was succesfull or not

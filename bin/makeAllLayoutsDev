@@ -10,7 +10,7 @@ function absolute-dir {
 
 # Some environment variables
 tkLayoutUserDirectory=/afs/cern.ch/user/t/tklayout
-tkLayoutDirectory=/home/tklayout-git
+tkLayoutDirectory=/afs/cern.ch/user/t/tklayout/private/tkLayout-nightlies
 doxygenTargetDirectory="/eos/user/t/tklayout/www/tklayout-git_doxygen"
 TKG_RECENTLAYOUTDIRECTORY="/eos/user/t/tklayout/www/layouts/recent-layouts"
 myDir=`dirname $0`
@@ -38,7 +38,7 @@ for branchName in ${branchList[*]}; do
     addOptions="-R -w "
     kinit -R `whoami`@CERN.CH
     echo branchName=$branchName
-    export TKGEOMETRYRC=$tkLayoutDirectory/tkgeometryrc-$branchName
+    export TKGEOMETRYRC=$tkLayoutDirectory/tkLayout-bot/tkgeometryrc-$branchName
     source $TKGEOMETRYRC
     mkdir -p $TKG_LAYOUTDIRECTORY
     #fs setacl -dir $TKG_LAYOUTDIRECTORY -acl webserver:afs rl
@@ -63,8 +63,8 @@ for branchName in ${branchList[*]}; do
 
 	make clean && make -j10 && {
 	    cd $TKG_STANDARDDIRECTORY/geometries/
-	    #activeLayouts=`grep SimParms -rli CMS_Phase2/*`
-	    activeLayouts=`grep SimParms -rli CMS_Phase2/OT6*`
+	    activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT616|OT617|OT618)'`
+	    #activeLayouts=`grep SimParms -rli CMS_Phase2/OT6*`
 	    #recentLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(IT404|IT405|IT406|IT407|IT408|IT420|IT421|IT422|IT423|IT502|IT503)'`
 	    pwd
 	    myDir=`pwd`

@@ -1,6 +1,6 @@
 TKG_LAYOUTDIRECTORY="/eos/user/t/tklayout/www/layouts/repository-git-dev_gabie"
-TKG_STANDARDDIRECTORY="/home/tklayout-git/tkLayout"
+TKG_STANDARDDIRECTORY="/afs/cern.ch/user/t/tklayout/private/tkLayout-nightlies/tkLayout"
 TKG_MOMENTA="1.00, 10.00, 100.00"
 TKG_TRIGGERMOMENTA="1, 1.5, 2, 2.5, 5"
 TKG_THRESHOLD_PROB="0.01, 0.50, 0.90, 0.95"
-TKG_BINDIRECTORY="/home/tklayout-git/bin"
+TKG_BINDIRECTORY="/afs/cern.ch/user/t/tklayout/private/tkLayout-nightlies/tkLayout-bot/bin"
