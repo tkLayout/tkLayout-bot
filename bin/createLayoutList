@@ -260,7 +260,7 @@ EOF
                   <td> T16 </td>                                                                                                                                                                                                                                                                                      
                   <td> CMSSW_11_0_X </td> 
                   <td> PhaseII/Tracker_Skewed_IT_2019_08 </td>
-                  <td> Active geometry: skewed IT. Material Budget: same as T15. </td>
+                  <td> Active geometry: skewed IT. Material Budget: same as T15. WARNING: IT only, OT still same as T15. </td>
 EOF
   elif [ "$aLayout" == "S_OT616_IT615" ]; then
     cat <<EOF     
@@ -275,6 +275,20 @@ EOF
                   <td> CMSSW_11_1_X </td> 
                   <td> PhaseII/TiltedTracker616 </td>
                   <td> TFPX: Shift all double-disks (and materials volumes and TBPX portcards) by + 25mm in Z. WARNING: IT only, OT still same as T15. </td>
+EOF
+  elif [ "$aLayout" == "U_OT616_IT700" ]; then
+    cat <<EOF     
+                  <td> T19 </td>                                                                                                                                                                                                                                                                                      
+                  <td> CMSSW_11_1_X </td> 
+                  <td> PhaseII/TiltedTracker700 </td>
+                  <td> Inner Tracker description with 3D sensors in TBPX L1 + TBPX L2 + TFPX R1. WARNING: IT only, OT still same as T15. </td>
+EOF
+  elif [ "$aLayout" == "V_OT616_IT615" ]; then
+    cat <<EOF     
+                  <td> T20 </td>                                                                                                                                                                                                                                                                                      
+                  <td> CMSSW_11_1_X </td> 
+                  <td> PhaseII/OuterTracker616_2020_04 </td>
+                  <td> Outer Tracker: All sensors 200 um -> 290 um + Update in Module MB and PS modules sensors lengths. + CMSSW now up to date with tkLayout OTST. </td>
 EOF
   else
     cat << EOF
@@ -339,6 +353,14 @@ EOF
   elif [ "$aLayout" == "OT616_IT613" ]; then
       cat <<EOF     
                   <td> OT study. <br> Was based from OT616_200. <br> Sensor thickness: 200 um -> 290 um + Add deep-diffused Si + Review inactive Si + Add length to s-sensor in PS module. </td>                                                                                                               
+EOF
+  elif [ "$aLayout" == "OT617_IT615" ]; then
+      cat <<EOF     
+                  <td> OT study. <br> Was based from OT616. <br> All TEDD: update smallDeltas to latest info. <br> Improve transition region between TB2S and TEDD by removing readout hybrid in TEDD1, R15. </td>                                                                                                               
+EOF
+  elif [ "$aLayout" == "OT618_IT615" ]; then
+      cat <<EOF     
+                  <td> OT study. <br> Was based from OT617. <br> Also improve transition between TB2S/TBPS and TEDD by removing readout hybrid in TEDD2, R15. </td>                                                                                                               
 EOF
   elif [ "$aLayout" == "OT613_200_IT405" ]; then
     cat <<EOF     
@@ -447,6 +469,14 @@ EOF
   elif [ "$aLayout" == "OT616_IT616" ]; then
       cat <<EOF     
                   <td> IT study. <br> Was based from IT615. <br> TFPX: Shift all double-disks (and materials volumes and TBPX portcards) by + 25mm in Z. </td>                                                                                                               
+EOF
+  elif [ "$aLayout" == "OT616_IT699" ]; then
+      cat <<EOF     
+                  <td> IT study. <br> Was based from IT615. <br> Reduced holes in TBPX L1 and L2: 1.3 mm -> 0.6 mm, to account for future 3D sensors spacing. </td>                                                                                                               
+EOF
+  elif [ "$aLayout" == "OT616_IT700" ]; then
+      cat <<EOF     
+                  <td> IT study. <br> Was based from IT699. <br> Same geometry + materials, but 3D sensor type in TBPX L1 + TBPX L2 + TFPX R1 (+ slightly different inactive Si). </td>                                                                                                               
 EOF
   fi
 fi
