@@ -63,7 +63,7 @@ for branchName in ${branchList[*]}; do
 
 	make clean && make -j10 && {
 	    cd $TKG_STANDARDDIRECTORY/geometries/
-	    activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT616|OT617|OT618)'`
+	    activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT616|OT617|OT618|OT8)'`
 	    #activeLayouts=`grep SimParms -rli CMS_Phase2/OT6*`
 	    #recentLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(IT404|IT405|IT406|IT407|IT408|IT420|IT421|IT422|IT423|IT502|IT503)'`
 	    pwd
