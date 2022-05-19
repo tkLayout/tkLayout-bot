@@ -24,6 +24,7 @@ export scriptTimeStamp=`date +%s`
 export scriptTimeStampFile=".scriptTimeStamp"
 
 echo "My directory is "$myDirAbsolute
+echo "tkLayoutDirectory is $tkLayoutDirectory"
 
 # WARNING: check if the 'git checkout' command works manually with branches first!
 export branchList=(master dev)
@@ -35,6 +36,9 @@ git clone https://github.com/tkLayout/tkLayout.git
 
 # Build the code and layouts for a few branches 
 for branchName in ${branchList[*]}; do
+  echo branchName=$branchName
+  export TKGEOMETRYRC=$tkLayoutDirectory/tkgeometryrc-$branchName
+
   $myDirAbsolute/buildBranch $branchName && {
     $myDirAbsolute/makeActiveLayouts
   } || {
