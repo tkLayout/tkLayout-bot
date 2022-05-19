@@ -1,0 +1,48 @@
+#!/bin/bash
+
+
+if [ "$0" == "-bash" ] || [ "$0" == '-sh' ]; then
+    myDir=.
+    myDirAbsolute=`absolute-dir $myDir`
+fi
+
+branchName="$1"
+[ "$branchName" == "" ] && branchName=master
+
+addOptions="-R -w "
+kinit -R `whoami`@CERN.CH
+echo branchName=$branchName
+export TKGEOMETRYRC=$tkLayoutDirectory/tkLayout-bot/tkgeometryrc-$branchName
+source $TKGEOMETRYRC
+mkdir -p $TKG_LAYOUTDIRECTORY
+#fs setacl -dir $TKG_LAYOUTDIRECTORY -acl webserver:afs rl
+codeDirectory="$tkLayoutDirectory/tkLayout"
+cd $codeDirectory
+git fetch origin
+git checkout $branchName
+git pull origin $branchName
+git clean -fd
+
+
+# Check whether there has been any update in the branch
+updateFlag=$(git log --since='240 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author | wc -l);
+echo "===> Number of recent updates: "$updateFlag
+if [ $updateFlag -eq  0 ]; then
+    echo "No update in Branch : "$branchName 
+else
+    last_updates=$(git log --since='240 hours'  --pretty=format:"The author of %h was %an, %ar Title : %s"  --date-order | egrep -v -i README | egrep author)
+    echo "$last_updates"
+    let "counter=$counter+1"
+    alias python=python3
+    source setup_centos8.sh
+    rm -f bin/tklayout
+    #make clean && make -j10 && $myDirAbsolute/
+    true && {
+	$myDirAbsolute/makeActiveLayouts
+    } || {
+	echo Compilation and/or installation failed
+    }
+fi
+
+$myDirAbsolute/createLayoutList
+

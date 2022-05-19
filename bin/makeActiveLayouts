@@ -1,0 +1,49 @@
+#!/bin/bash
+
+echo TKG_STANDARDDIRECTORY/geometries/ is $TKG_STANDARDDIRECTORY/geometries/
+exit 0
+
+cd $TKG_STANDARDDIRECTORY/geometries/
+activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT616|OT617|OT618|OT8)'`
+#activeLayouts=`grep SimParms -rli CMS_Phase2/OT6*`
+#recentLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(IT404|IT405|IT406|IT407|IT408|IT420|IT421|IT422|IT423|IT502|IT503)'`
+pwd
+myDir=`pwd`
+lindx=0
+for aLayout in $activeLayouts; do
+    kinit -R `whoami`@CERN.CH
+    echo "date and time: `date`"; echo "timestamp: `date +%s`"
+    let "lindx=$lindx+1"
+    # Some afs magic to avoid issues while dealing with a huge number of files.
+    fs checkvolumes
+    echo "Branch Name "$branchName"::Starting Layout no. "$lindx" => "$aLayout
+    layoutCfg=`basename $aLayout`
+    layoutDir=`dirname $aLayout`
+    cd $myDir/$layoutDir
+    pwd
+
+    echo "${codeDirectory}/bin/tklayout --performance -a -N 3000 -n 50000 -T $addOptions $layoutCfg"
+    ${codeDirectory}/bin/tklayout --performance -a -N 3000 -n 50000 -T $addOptions $layoutCfg
+    layoutName=`echo $layoutCfg | sed -e 's/.cfg$//g'`
+    targetLayoutDir="$TKG_LAYOUTDIRECTORY/$layoutName"
+    if [ -d $targetLayoutDir ] ; then
+        echo "$scriptTimeStamp" > $targetLayoutDir/$scriptTimeStampFile
+        $myDirAbsolute/createLayoutList
+        echo "Branch Name "$branchName"::Done with Layout no. "$lindx
+    else
+        echo "ERROR: target directory $targetLayoutDir not created!"
+    fi
+    # If in dev and the layout is recent, make it accessible from recent-layouts tab.
+    #if [ "$branchName" == "dev" ] && [[ "${recentLayouts[*]}" =~ "$aLayout" ]]; then
+    #if [ -d $targetLayoutDir ] ; then              
+    #recentLayout="$TKG_RECENTLAYOUTDIRECTORY/$layoutName"
+    #eos rm -fr $recentLayout
+    #ln -snf $targetLayout $recentLayout
+    #$myDirAbsolute/createLayoutList
+    #echo "Recent layouts tab: Add link to "$branchName" layout no. "$lindx
+    #fi
+    #fi
+done
+echo "date and time: `date`"; echo "timestamp: `date +%s`"
+echo ok
+
