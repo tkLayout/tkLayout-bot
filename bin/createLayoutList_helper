@@ -1,13 +1,5 @@
 #!/bin/bash
 
-export TKG_LAYOUTDIRECTORY=/eos/user/t/tklayout/www/layouts
-cd $TKG_LAYOUTDIRECTORY
-
-# List of subdirectories (sections)
-subDirs=`ls -d * | grep -v 'style' | egrep -v '^\.$'`
-goodDirs=""; for tryThis in $subDirs; do [ -d "$tryThis" ] && goodDirs="$goodDirs $tryThis"; done
-subDirs="$goodDirs" 
-
 inverseSubDir() {
   if [ "$1" == "." ]; then
     echo "."
@@ -488,33 +480,3 @@ cat <<EOF
 </html>
 EOF
 }
-
-for subDir in $subDirs ; do
-  layoutList=""
-  cd $TKG_LAYOUTDIRECTORY/$subDir
-  echo $subDir
-  dirlist=`find -maxdepth 1 -type d -o -type l | cut -d'/' -f2- | egrep -v '^\.' | sort`
-
-  for dirName in $dirlist ; do
-    echo $dirName
-    directory=$TKG_LAYOUTDIRECTORY/$subDir/$dirName
-    if [ "$dirName" != "style" ] && [ -d "$directory" ]; then
-      cd "$directory"
-      echo $directory
-
-      rzFile='fullLayout000-120x120-1800x600_small.png'
-      if [ ! -f "$rzFile" ]; then rzFile=`ls img000-120x120*_small.png 2> /dev/null | head -n1`; fi 
-      [ -f "$rzFile" ] && cp $rzFile layout_rz_icon.png
-
-      xyFile="fullLayoutBarrelXY000-120x120-600x600_small.png"
-      if [ ! -f "$xyFile" ]; then xyFile="img001-120x120-600x600_small.png"; fi
-      [ -f "$xyFile" ] && cp $xyFile layout_rphi_icon.png
-
-      layoutList="$layoutList $dirName"
-    fi
-  done
-  cd $TKG_LAYOUTDIRECTORY/$subDir
-  dumpPage $subDir "$layoutList" > index.html
-
-done
-

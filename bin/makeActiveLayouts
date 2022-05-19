@@ -4,13 +4,13 @@
 COMPUTE_OPTIONS=""
 source $TKGEOMETRYRC
 alias python=python3
+shopt -s expand_aliases
 TKG_STANDARDDIRECTORY="$tkLayoutDirectory/tkLayout"
 source $TKG_STANDARDDIRECTORY/setup_centos8.sh
 TKG_BINDIRECTORY="$tkLayoutDirectory/tkLayout/bin"
 
 # echo TKG_STANDARDDIRECTORY/geometries/ is $TKG_STANDARDDIRECTORY/geometries/
 # echo "$TKG_BINDIRECTORY/tklayout $COMPUTE_OPTIONS $layoutCfg"
-exit 0
 
 cd $TKG_STANDARDDIRECTORY/geometries/
 #activeLayouts=`grep SimParms -rli CMS_Phase2/* | egrep '(OT616|OT617|OT618|OT8)'`

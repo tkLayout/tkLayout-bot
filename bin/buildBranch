@@ -14,10 +14,12 @@ git checkout $branchName
 git pull origin $branchName
 git clean -fd
 alias python=python3
+shopt -s expand_aliases
 
 source setup_centos8.sh
 rm -f bin/tklayout
-#make clean && make -j`nproc`
-make -j`nproc`
+make clean && make -j`nproc`
+
+
 
 
